@@ -1,0 +1,11 @@
+ext {
+    kotlin_version = "1.4.31"
+    gradle_version = "4.2.0"
+
+    ktx_version = "1.6.0"
+
+    junit_version = "4.+"
+    test_runner_version = "1.0.2"
+
+    annotations_version = "0.0.1"
+}
