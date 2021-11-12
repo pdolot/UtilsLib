@@ -1,6 +1,5 @@
 package com.dolotdev.utils.processing.attributes
 
-import android.content.Context
 import android.content.res.TypedArray
 import android.util.AttributeSet
 import android.view.View
@@ -22,7 +21,7 @@ object AttributesInjector {
 				.getField(styleableAnnotation.annotation.styleableResName)
 				.get(ResourceClassInfo.getStyleableClass(context)) as IntArray
 			val a = context.obtainStyledAttributes(attrs, styleableAttrs, defStyleAttr, defStyleRes)
-			processAttributesAnnotations(context, styleableAnnotation, a)
+			view.processAttributesAnnotations(styleableAnnotation, a)
 			a.recycle()
 		}
 	}
@@ -93,10 +92,10 @@ object AttributesInjector {
 		}
 	}
 
-	private fun processAttributesAnnotations(context: Context, annotation: StyleableAnnotation, attrs: TypedArray) {
+	private fun View.processAttributesAnnotations(annotation: StyleableAnnotation, attrs: TypedArray) {
 		annotation.viewClass.declaredFields.forEach { field ->
 			val attr = field.getAnnotatedAttribute(annotation.annotation)
-			attr?.context = context
+			attr?.context = this.context
 			attr?.getValue(attrs)?.let {
 				val isPublic = field.isAccessible
 				field.isAccessible = true
