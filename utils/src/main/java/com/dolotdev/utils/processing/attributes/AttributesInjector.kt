@@ -11,8 +11,10 @@ import java.lang.reflect.Field
 object AttributesInjector {
 
 	fun inject(view: View, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0) {
-		val styleableAnnotation = view::class.java.annotations.filterIsInstance<StyleableRes>().firstOrNull()
-		if (styleableAnnotation != null) {
+		val styleableAnnotations = mutableListOf<StyleableRes>()
+		view::class.java.getSuperclassStyleableAnnotations(styleableAnnotations)
+
+		styleableAnnotations.forEach { styleableAnnotation ->
 			val context = view.context
 			val styleableAttrs: IntArray = ResourceClassInfo
 				.getStyleableClass(context)
@@ -21,6 +23,19 @@ object AttributesInjector {
 			val a = context.obtainStyledAttributes(attrs, styleableAttrs, defStyleAttr, defStyleRes)
 			view.processAttributesAnnotations(styleableAnnotation, a)
 			a.recycle()
+		}
+	}
+
+	private fun Class<in Nothing>.getSuperclassStyleableAnnotations(collection: MutableList<StyleableRes>) {
+		if (View::class.java.isAssignableFrom(this)) {
+			val annotation = annotations.filterIsInstance<StyleableRes>().firstOrNull()
+			if (annotation != null) {
+				collection.add(annotation)
+			}
+
+			if (superclass != View::class.java && View::class.java.isAssignableFrom(superclass)) {
+				superclass.getSuperclassStyleableAnnotations(collection)
+			}
 		}
 	}
 
