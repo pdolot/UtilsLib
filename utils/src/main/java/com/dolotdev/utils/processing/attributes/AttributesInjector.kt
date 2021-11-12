@@ -1,5 +1,6 @@
 package com.dolotdev.utils.processing.attributes
 
+import android.content.Context
 import android.content.res.TypedArray
 import android.util.AttributeSet
 import android.view.View
@@ -11,26 +12,31 @@ import java.lang.reflect.Field
 object AttributesInjector {
 
 	fun inject(view: View, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0) {
-		val styleableAnnotations = mutableListOf<StyleableRes>()
+		val styleableAnnotations = mutableListOf<StyleableAnnotation>()
 		view::class.java.getSuperclassStyleableAnnotations(styleableAnnotations)
 
 		styleableAnnotations.forEach { styleableAnnotation ->
 			val context = view.context
 			val styleableAttrs: IntArray = ResourceClassInfo
 				.getStyleableClass(context)
-				.getField(styleableAnnotation.styleableResName)
+				.getField(styleableAnnotation.annotation.styleableResName)
 				.get(ResourceClassInfo.getStyleableClass(context)) as IntArray
 			val a = context.obtainStyledAttributes(attrs, styleableAttrs, defStyleAttr, defStyleRes)
-			view.processAttributesAnnotations(styleableAnnotation, a)
+			processAttributesAnnotations(context, styleableAnnotation, a)
 			a.recycle()
 		}
 	}
 
-	private fun Class<in Nothing>.getSuperclassStyleableAnnotations(collection: MutableList<StyleableRes>) {
+	private data class StyleableAnnotation(
+		val viewClass: Class<in Nothing>,
+		val annotation: StyleableRes
+	)
+
+	private fun Class<in Nothing>.getSuperclassStyleableAnnotations(collection: MutableList<StyleableAnnotation>) {
 		if (View::class.java.isAssignableFrom(this)) {
 			val annotation = annotations.filterIsInstance<StyleableRes>().firstOrNull()
 			if (annotation != null) {
-				collection.add(annotation)
+				collection.add(StyleableAnnotation(this, annotation))
 			}
 
 			if (superclass != View::class.java && View::class.java.isAssignableFrom(superclass)) {
@@ -87,10 +93,10 @@ object AttributesInjector {
 		}
 	}
 
-	private fun View.processAttributesAnnotations(styleableRes: StyleableRes, attrs: TypedArray) {
-		this::class.java.declaredFields.forEach { field ->
-			val attr = field.getAnnotatedAttribute(styleableRes)
-			attr?.context = this.context
+	private fun processAttributesAnnotations(context: Context, annotation: StyleableAnnotation, attrs: TypedArray) {
+		annotation.viewClass.declaredFields.forEach { field ->
+			val attr = field.getAnnotatedAttribute(annotation.annotation)
+			attr?.context = context
 			attr?.getValue(attrs)?.let {
 				val isPublic = field.isAccessible
 				field.isAccessible = true
